@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 
 import com.cg.ibs.loanmgmt.IBSexception.ExceptionMessages;
 import com.cg.ibs.loanmgmt.IBSexception.IBSException;
+import com.cg.ibs.loanmgmt.bean.AccountHolding;
 import com.cg.ibs.loanmgmt.bean.BankAdmins;
 import com.cg.ibs.loanmgmt.bean.CustomerBean;
 import com.cg.ibs.loanmgmt.bean.LoanMaster;
@@ -166,7 +167,8 @@ public class User implements ExceptionMessages {
 		} else {
 			System.out.println("Good Morning!");
 		}
-		System.out.println("Welcome " + customer.getFirstName() + " " + customer.getLastName());
+		System.out.println(customer.getUci());
+		System.out.println("Welcome " + customer.getFirstName() + " " + customer.getLastName());		
 		while (customerChoice != CustomerOptions.LOG_OUT) {
 			System.out.println("--------------------");
 			System.out.println("Please select one of the following to proceed further : ");
@@ -727,6 +729,8 @@ public class User implements ExceptionMessages {
 		if (null == customer) {
 			System.out.println("Thank you for visiting");
 		} else {
+			selectSavingsAccount(customer, loanMaster);
+			System.out.println(loanMaster.getSavingsAccount().toString());
 			System.out.println("\n\t\t******Upload Document******\n");
 			System.out.println("Please upload proof document in pdf format");
 			System.out.println("\nEnter the file path: ");
@@ -814,7 +818,7 @@ public class User implements ExceptionMessages {
 			}
 		}
 		shallContinue = true;
-		LOGGER.debug("Check loan tenure");
+		LOGGER.debug("Checking loan tenure");
 		while (shallContinue) {
 			System.out.println("Enter Loan Tenure (Months): ");
 			System.out.println("** Tenure should be in multiples of 6 months **");
@@ -834,6 +838,40 @@ public class User implements ExceptionMessages {
 		}
 		customerService.calculateEmi(loanMaster);
 		System.out.println("\nMonthly EMI: INR " + loanMaster.getEmiAmount().toPlainString());
+		return loanMaster;
+	}
+	private LoanMaster selectSavingsAccount(CustomerBean customer, LoanMaster loanMaster) {
+		System.out.println("Select the Savings Account you would like to link to your Loan Account:");
+		System.out.println("\t\t\t**********\n");
+		List<AccountHolding> savingAccountList = new ArrayList<>();
+		savingAccountList = customerService.getSavingAccountListByUci(customer);
+		System.out.printf("%20s %20s", "ACCOUNT NUMBER", "ACCOUNT TYPE");
+		System.out.println();
+		System.out.println(
+				"------------------------------------------------------------------------------------------------------------------------------------------------------");
+		for (AccountHolding accountHolding : savingAccountList) {
+			System.out.format("%20d %20s ", accountHolding.getAccount().getAccNo(),accountHolding.getType());
+			System.out.println();
+		}
+		System.out.println(
+				"------------------------------------------------------------------------------------------------------------------------------------------------------");
+		System.out.println("\n\t\t\t**********\n");
+		System.out.println();
+		boolean shallContinue = true;
+		LOGGER.debug("Checking loan tenure");
+		BigInteger accountNumber = null;
+		while (shallContinue) {
+			System.out.println("Enter the Saving Account Number to be linked with you Loan Account: ");
+			accountNumber = read.nextBigInteger();
+			for (AccountHolding accountHolding : savingAccountList) {
+				if(accountHolding.getAccount().getAccNo().equals(accountNumber)) {
+					shallContinue = false;
+					break;
+				}
+			}
+		}
+		
+		loanMaster.setSavingsAccount(customerService.getAccount(accountNumber));
 		return loanMaster;
 	}
 

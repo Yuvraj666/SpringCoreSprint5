@@ -19,7 +19,7 @@ public class DocumentBean implements Serializable{
 	@Column(name = "application_num", nullable = false)
 	private BigInteger applicationNumber;
 	@Lob
-	@Column(name = "address_proof", nullable = true)
+	@Column(name = "file" , nullable = true)
 	private byte[] document;
 	@Column(name = "document_name", nullable = false)
 	private String documentName;

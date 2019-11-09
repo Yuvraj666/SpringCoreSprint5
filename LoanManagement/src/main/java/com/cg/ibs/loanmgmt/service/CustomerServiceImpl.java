@@ -17,11 +17,15 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.cg.ibs.loanmgmt.bean.Account;
+import com.cg.ibs.loanmgmt.bean.AccountHolding;
 import com.cg.ibs.loanmgmt.bean.CustomerBean;
 import com.cg.ibs.loanmgmt.bean.LoanMaster;
 import com.cg.ibs.loanmgmt.bean.LoanStatus;
 import com.cg.ibs.loanmgmt.bean.LoanTypeBean;
 import com.cg.ibs.loanmgmt.bean.TransactionBean;
+import com.cg.ibs.loanmgmt.dao.AccountDao;
+import com.cg.ibs.loanmgmt.dao.AccountHoldingDao;
 import com.cg.ibs.loanmgmt.dao.CustomerDao;
 import com.cg.ibs.loanmgmt.dao.LoanMasterDao;
 import com.cg.ibs.loanmgmt.dao.LoanTypeDao;
@@ -43,7 +47,10 @@ public class CustomerServiceImpl implements CustomerService {
 	private LoanMasterDao loanMasterDao;
 	@Autowired
 	private TransactionDao transactionDao;
-	
+	@Autowired
+	private AccountHoldingDao accountHoldingDao;
+	@Autowired
+	private AccountDao accountDao;
 	private LoanMaster loanMaster = new LoanMaster();
 
 	@Override
@@ -264,5 +271,15 @@ public class CustomerServiceImpl implements CustomerService {
 	@Override
 	public List<LoanMaster> getApprovedLoanListByUci(CustomerBean customer) {
 		return loanMasterDao.getApprovedLoanListByUci(customer);
+	}
+
+	@Override
+	public List<AccountHolding> getSavingAccountListByUci(CustomerBean customer) {
+		return accountHoldingDao.getSavingAccountListByUci(customer);
+	}
+
+	@Override
+	public Account getAccount(BigInteger accountNumber) {
+		return accountDao.getAccount(accountNumber);
 	}
 }

@@ -6,6 +6,8 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.List;
 
+import com.cg.ibs.loanmgmt.bean.Account;
+import com.cg.ibs.loanmgmt.bean.AccountHolding;
 import com.cg.ibs.loanmgmt.bean.CustomerBean;
 import com.cg.ibs.loanmgmt.bean.LoanMaster;
 import com.cg.ibs.loanmgmt.bean.LoanTypeBean;
@@ -27,7 +29,12 @@ public interface CustomerService {
 
 	CustomerBean getCustomer(String userId);
 
+	List<AccountHolding> getSavingAccountListByUci(CustomerBean customer);
+
+	Account getAccount(BigInteger accountNumber);
+
 	List<LoanMaster> getLoanListByUci(CustomerBean customer);
+
 	List<LoanMaster> getApprovedLoanListByUci(CustomerBean customer);
 
 	TransactionBean createTransaction(LoanMaster loanMaster);

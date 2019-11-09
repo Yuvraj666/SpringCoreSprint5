@@ -13,6 +13,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Lob;
+import javax.persistence.OneToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
@@ -42,11 +43,58 @@ public class LoanMaster implements Serializable {
 	private Integer typeId;
 	@Column(name = "emi_amount", nullable = false)
 	private BigDecimal emiAmount;
-	@Column(name = "document_Id", nullable = false)
-	private long documentId;
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private LoanStatus status;
+
+	public LocalDate getApprovedDate() {
+		return approvedDate;
+	}
+
+	public void setApprovedDate(LocalDate approvedDate) {
+		this.approvedDate = approvedDate;
+	}
+
+	public LocalDate getLoanClosededDate() {
+		return loanClosededDate;
+	}
+
+	public void setLoanClosededDate(LocalDate loanClosededDate) {
+		this.loanClosededDate = loanClosededDate;
+	}
+
+	public LocalDate getPreclosureAppliedDate() {
+		return preclosureAppliedDate;
+	}
+
+	public void setPreclosureAppliedDate(LocalDate preclosureAppliedDate) {
+		this.preclosureAppliedDate = preclosureAppliedDate;
+	}
+
+	public LocalDate getPreclosureApprovedDate() {
+		return preclosureApprovedDate;
+	}
+
+	public void setPreclosureApprovedDate(LocalDate preclosureApprovedDate) {
+		this.preclosureApprovedDate = preclosureApprovedDate;
+	}
+
+	public BigDecimal getTopUpCount() {
+		return topUpCount;
+	}
+
+	public void setTopUpCount(BigDecimal topUpCount) {
+		this.topUpCount = topUpCount;
+	}
+
+	public Account getSavingsAccount() {
+		return savingsAccount;
+	}
+
+	public void setSavingsAccount(Account savingsAccount) {
+		this.savingsAccount = savingsAccount;
+	}
+
 	@Column(name = "next_emi_date")
 	private LocalDate nextEmiDate;
 	@Column(name = "loan_account_num", unique = true)
@@ -61,6 +109,8 @@ public class LoanMaster implements Serializable {
 	private LocalDate preclosureApprovedDate;
 	@Column(name = "top_Up_count")
 	private BigDecimal topUpCount;
+	@OneToOne
+	private Account savingsAccount;
 
 
 	public LoanMaster() {
