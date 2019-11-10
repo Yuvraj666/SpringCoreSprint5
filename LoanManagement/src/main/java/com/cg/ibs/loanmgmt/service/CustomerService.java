@@ -9,6 +9,7 @@ import java.util.List;
 import com.cg.ibs.loanmgmt.bean.Account;
 import com.cg.ibs.loanmgmt.bean.AccountHolding;
 import com.cg.ibs.loanmgmt.bean.CustomerBean;
+import com.cg.ibs.loanmgmt.bean.DocumentBean;
 import com.cg.ibs.loanmgmt.bean.LoanMaster;
 import com.cg.ibs.loanmgmt.bean.LoanTypeBean;
 import com.cg.ibs.loanmgmt.bean.TransactionBean;
@@ -25,7 +26,7 @@ public interface CustomerService {
 
 	boolean verifyCustomerLogin(String userId, String password);
 
-	LoanMaster applyLoan(CustomerBean customer, LoanMaster loanMaster, String path) throws IOException;
+	LoanMaster applyLoan(CustomerBean customer, LoanMaster loanMaster) throws IOException;
 
 	CustomerBean getCustomer(String userId);
 
@@ -57,4 +58,6 @@ public interface CustomerService {
 
 	public boolean receiptGenerator(LoanMaster loanMaster, TransactionBean transaction)
 			throws DocumentException, FileNotFoundException;
+
+	public DocumentBean uploadDocument(String docName, BigInteger docApplicationNum, String path) throws IOException;
 }
