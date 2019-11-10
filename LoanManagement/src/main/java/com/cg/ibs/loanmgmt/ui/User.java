@@ -24,6 +24,7 @@ import com.cg.ibs.loanmgmt.bean.CustomerBean;
 import com.cg.ibs.loanmgmt.bean.DocumentBean;
 import com.cg.ibs.loanmgmt.bean.LoanMaster;
 import com.cg.ibs.loanmgmt.bean.LoanStatus;
+import com.cg.ibs.loanmgmt.bean.TopUp;
 import com.cg.ibs.loanmgmt.bean.TransactionBean;
 import com.cg.ibs.loanmgmt.service.BankService;
 import com.cg.ibs.loanmgmt.service.CustomerService;
@@ -39,6 +40,7 @@ public class User implements ExceptionMessages {
 	private static Logger LOGGER = Logger.getLogger(User.class);
 	private static Scanner read = new Scanner(System.in);
 	private static DocumentBean document;
+	private static LoanMaster loanMaster;
 
 	public void userLogin() throws IBSException {
 		UserOptions choice = null;
@@ -199,6 +201,9 @@ public class User implements ExceptionMessages {
 					case VIEW_HISTORY:
 						viewHistory(customer);
 						break;
+					case LOAN_TOPUP:
+						loanTopUp(customer);
+						break;
 					case LOG_OUT:
 						System.out.println("Thank You! Come Again.");
 						userLogin();
@@ -297,6 +302,120 @@ public class User implements ExceptionMessages {
 		}
 	}
 
+	private void loanTopUp(CustomerBean customer) {
+		List<LoanMaster> listTemp = new ArrayList<>();
+		listTemp = customerService.getApprovedLoanListByUci(customer);
+		if (listTemp.isEmpty()) {
+			System.out.println("No Active Loans");
+		} else {
+			System.out.printf("%20s %20s %20s %20s %25s %25s %20s %20s %20s", "APPLIED DATE", "LOAN AMOUNT",
+					"LOAN TYPE", "LOAN NUMBER", "NUMBER OF EMI's PAID", "TOTAL NUMBER OF EMI's", "LOAN STATUS",
+					"BALANCE", "EMI AMOUNT");
+			System.out.println();
+			System.out.println(
+					"--------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
+			for (LoanMaster loanMaster : listTemp) {
+				System.out.format("%20tD %20f %20s %20s %25s %25s %20s %20f %20f", loanMaster.getAppliedDate(),
+						loanMaster.getLoanAmount().setScale(2),
+						customerService.getLoanTypeByTypeId(loanMaster.getTypeId()).getLoanType(),
+						loanMaster.getLoanAccountNumber(), loanMaster.getNumOfEmisPaid(),
+						loanMaster.getTotalNumOfEmis(), loanMaster.getStatus(), loanMaster.getBalance(),
+						loanMaster.getEmiAmount().setScale(2));
+				System.out.println();
+			}
+			System.out.println(
+					"--------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
+			System.out.println("\n\t\t\t**********\n");
+			LoanMaster loanMasterTemp = null;
+			while (loanMasterTemp == null) {
+				System.out.println("Enter the loan number of the loan you want to top up: ");
+				String loanNumInputTemp = read.next();
+				Pattern pattern = Pattern.compile("[1-9]{1}[0-9]{1,12}");
+				Matcher matcher = pattern.matcher(loanNumInputTemp);
+				if (matcher.matches()) {
+					BigInteger loanNumInput = new BigInteger(loanNumInputTemp);
+					System.out.println("\n\t\t\t********\n");
+					for (LoanMaster loanMaster : listTemp) {
+						if (loanMaster.getLoanAccountNumber().equals(loanNumInput)) {
+							loanMasterTemp = loanMaster;
+						}
+					}
+					if (loanMasterTemp == null) {
+						System.out.println("Invalid Loan Number");
+					}
+				} else {
+					try {
+						throw new IBSException(ExceptionMessages.MESSAGEFORINVALIDLOANNUMBER);
+					} catch (IBSException exp) {
+						LOGGER.error(exp.getMessage(), exp);
+						System.out.println(exp.getMessage());
+
+					}
+				}
+			}
+			System.out.println("Enter the amount you want to top up with: ");
+			BigDecimal topUpAmount = read.nextBigDecimal();
+			boolean amountVerify = false;
+			while (amountVerify == false) {
+				amountVerify = customerService.verifyTopupAmount(loanMasterTemp, topUpAmount);
+				if (amountVerify) {
+					System.out.println("Enter the tenure: ");
+					Integer topUpTenure = read.nextInt();
+					boolean tenureVerify = false;
+					while (tenureVerify == false) {
+						tenureVerify = customerService.verifyTopUpTenure(loanMasterTemp, topUpTenure);
+						if (tenureVerify) {
+							BigDecimal updatedTopUpBalance = loanMasterTemp.getBalance().add(topUpAmount);
+							loanMasterTemp.setBalance(updatedTopUpBalance);
+							System.out.println("Loan Number:\t" + loanMasterTemp.getLoanAccountNumber());
+							System.out.println("Loan Type:\t"
+									+ customerService.getLoanTypeByTypeId(loanMasterTemp.getTypeId()).getLoanType());
+							System.out.println("Total Number of EMI's to be paid:\t"
+									+ (loanMasterTemp.getTotalNumOfEmis() + topUpTenure));
+							System.out.println("Number of EMI's already paid:\t" + loanMasterTemp.getNumOfEmisPaid());
+							System.out.println("Balance Amount to be paid:\t" + updatedTopUpBalance);
+							System.out.println("EMI to be paid:\t" + customerService.calculateEmi(loanMasterTemp));
+							System.out.println("\n\t\t\t********\n");
+							System.out.println("Do you want to apply top-up:\n1. Yes\n2. No");
+							switch (read.nextInt()) {
+							case 1:
+								TopUp topUp = new TopUp();
+								topUp.setTopUpAmount(topUpAmount);
+								topUp.setTopUpTenure(topUpTenure);
+								LOGGER.info("Your loan application has been sent for verification");
+								try {
+									System.out
+											.println("Loan with Application Number "
+													+ customerService.applyTopUp(customer, loanMasterTemp, topUp)
+															.getApplicationNumber()
+													+ " has been sent for verification!");
+								} catch (IOException exp) {
+									try {
+										throw new IBSException(MESSAGEFORIOEXCEPTION);
+									} catch (IBSException exp1) {
+										LOGGER.error(exp1.getMessage(), exp1);
+										System.out.println(exp1.getMessage());
+									}
+								}
+							case 2:
+								System.out.println("Thankyou!");
+								break;
+							}
+						} else {
+							System.out.println("Enter valid TopUp tenure");
+							System.out.println("The top up tenure cannot exceed the original loan tenure");
+						}
+					}
+				} else {
+					System.out.println("Enter valid TopUp amount");
+					System.out.println("The new balance cannot exceed the original Loan Amount");
+				}
+			}
+		}
+
+	}
+
+	
 	private void viewHistory(CustomerBean customer) {
 //		SimpleDateFormat ft = new SimpleDateFormat("dd-MM-yyyy");
 		Integer viewHistoryInput;
@@ -433,6 +552,9 @@ public class User implements ExceptionMessages {
 				case VERIFY_PRECLOSURE:
 					verifyPreClosure();
 					break;
+				case VERIFY_TOPUP:
+					verifyTopUp();
+					break;	
 				case LOG_OUT:
 					userLogin();
 				}
@@ -667,6 +789,79 @@ public class User implements ExceptionMessages {
 		}
 	}
 
+	private void verifyTopUp() {
+		LOGGER.info("TopUp is being verified");
+		List<TopUp> pendingTopUp = new ArrayList<TopUp>();
+		pendingTopUp = bankService.getPendingTopUp();
+		if (pendingTopUp.isEmpty()) {
+			System.out.println("No pending TopUps!");
+		} else {
+			System.out.println("Pending Top-Up Verification: ");
+			LOGGER.debug("Listing pending Top-up");
+			for (TopUp topUp : pendingTopUp) {
+				System.out.println(getLoanByApplicantNum(topUp.getApplicationNumber()).getLoanAccountNumber() + "\t"
+						+ topUp.getTopUpAmount() + "\t" + topUp.getTopUpAppliedDate() + "\t" + topUp.getTopUpTenure());
+
+			}
+
+			System.out.println("Enter the Loan number of the loan for which you want to verify the Top-Up: ");
+			BigInteger loanNumInput = read.nextBigInteger();
+			TopUp topUpTemp = new TopUp();
+			for (TopUp topUp : pendingTopUp) {
+				if (getLoanByApplicantNum(topUp.getApplicationNumber()).getLoanAccountNumber().equals(loanNumInput)) {
+					topUpTemp = topUp;
+					break;
+				}
+			}
+			Integer numOfEmisLeft = (getLoanByApplicantNum(topUpTemp.getApplicationNumber()).getTotalNumOfEmis())
+					- ((getLoanByApplicantNum(topUpTemp.getApplicationNumber()).getNumOfEmisPaid()));
+			System.out.println("\t********");
+			System.out.println("\n\nLoan No.: "
+					+ getLoanByApplicantNum(topUpTemp.getApplicationNumber()).getLoanAccountNumber()
+					+ "\nName of customer: "
+					+ bankService
+							.getCustomerDetailsByUci((getLoanByApplicantNum(topUpTemp.getApplicationNumber())).getUci())
+							.getFirstName()
+					+ " "
+					+ bankService
+							.getCustomerDetailsByUci((getLoanByApplicantNum(topUpTemp.getApplicationNumber())).getUci())
+							.getLastName()
+					+ "\nLoan Amount: " + getLoanByApplicantNum(topUpTemp.getApplicationNumber()).getLoanAmount()
+					+ "\nOutstanding Balance: " + getLoanByApplicantNum(topUpTemp.getApplicationNumber()).getBalance()
+					+ "\nNumber of EMI's left: " + numOfEmisLeft + "Post top-up balance: "
+					+ getLoanByApplicantNum(topUpTemp.getApplicationNumber()).getBalance()
+							.add(topUpTemp.getTopUpAmount())
+					+ "Post top-up tenure: " + numOfEmisLeft + topUpTemp.getTopUpTenure());
+
+			System.out.println("\t********");
+			System.out.println("\nDo you want to approve the Top-Up? \n1. Yes\n2. No");
+			Integer topUpApprovalInput = read.nextInt();
+			switch (topUpApprovalInput) {
+			case 1:
+				System.out.println("TopUp against loan number"
+						+ getLoanByApplicantNum(topUpTemp.getApplicationNumber()).getLoanAccountNumber()
+						+ " has been approved.");
+				TopUp topUpTemp1 = bankService.setTopUp(topUpTemp);
+				System.out.println("Updated loan details:\nBalance: "
+						+ getLoanByApplicantNum(topUpTemp1.getApplicationNumber()).getBalance()
+						+ "\nNumber of EMIs paid: "
+						+ getLoanByApplicantNum(topUpTemp1.getApplicationNumber()).getNumOfEmisPaid());
+				break;
+			case 2:
+				System.out.println("Top-up for loan with loan number "
+						+ getLoanByApplicantNum(topUpTemp.getApplicationNumber()).getLoanAccountNumber()
+						+ " has been declined.");
+				bankService.updateTopUpDenial(topUpTemp);
+			}
+
+		}
+	}
+	
+	private LoanMaster getLoanByApplicantNum(BigInteger applicantNum) {
+		loanMaster = bankService.getLoanByApplicantNum(applicantNum);
+		return loanMaster;
+	}
+	
 	// customer Login
 	private CustomerBean customerLogin() {
 		LOGGER.info("Login portal");
@@ -913,7 +1108,7 @@ public class User implements ExceptionMessages {
 				if (verify) {
 					System.out.println("The two account numbers entered  do not match");
 				}
-				if(shallContinue && !verify) {
+				if (shallContinue && !verify) {
 					System.out.println(accountNumber + " is not a valid Savings Account Number!\n");
 				}
 			}

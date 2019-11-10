@@ -24,14 +24,17 @@ import com.cg.ibs.loanmgmt.bean.DocumentBean;
 import com.cg.ibs.loanmgmt.bean.LoanMaster;
 import com.cg.ibs.loanmgmt.bean.LoanStatus;
 import com.cg.ibs.loanmgmt.bean.LoanTypeBean;
+import com.cg.ibs.loanmgmt.bean.TopUp;
+import com.cg.ibs.loanmgmt.bean.TopUpStatus;
 import com.cg.ibs.loanmgmt.bean.TransactionBean;
 import com.cg.ibs.loanmgmt.dao.AccountDao;
 import com.cg.ibs.loanmgmt.dao.AccountHoldingDao;
 import com.cg.ibs.loanmgmt.dao.CustomerDao;
 import com.cg.ibs.loanmgmt.dao.LoanMasterDao;
 import com.cg.ibs.loanmgmt.dao.LoanTypeDao;
+import com.cg.ibs.loanmgmt.dao.TopUpDao;
+import com.cg.ibs.loanmgmt.dao.TopUpDaoImpl;
 import com.cg.ibs.loanmgmt.dao.TransactionDao;
-import com.cg.ibs.loanmgmt.dao.TransactionDaoImpl;
 import com.cg.ibs.loanmgmt.util.JpaUtil;
 import com.itextpdf.text.Document;
 import com.itextpdf.text.DocumentException;
@@ -55,6 +58,8 @@ public class CustomerServiceImpl implements CustomerService {
 	private AccountDao accountDao;
 	private LoanMaster loanMaster = new LoanMaster();
 	private static DocumentBean document;
+	@Autowired
+	private TopUpDao topUpDao;
 
 	@Override
 	public LoanTypeBean getLoanTypeByTypeId(Integer typeId) {
@@ -294,6 +299,40 @@ public class CustomerServiceImpl implements CustomerService {
 	@Override
 	public Account getAccount(BigInteger accountNumber) {
 		return accountDao.getAccount(accountNumber);
+	}
+
+	@Override
+	public boolean verifyTopupAmount(LoanMaster loanMasterTemp, BigDecimal topUpAmount) {
+		boolean verify = false;
+		if ((loanMasterTemp.getBalance().add(topUpAmount)).compareTo(loanMasterTemp.getLoanAmount()) <= 0) {
+
+			verify = true;
+		}
+		return verify;
+	}
+
+	@Override
+	public boolean verifyTopUpTenure(LoanMaster loanMasterTemp, Integer topUpTenure) {
+		boolean verify = false;
+		if (topUpTenure <= loanMasterTemp.getTotalNumOfEmis()) {
+			verify = true;
+		}
+		return verify;
+	}
+
+	@Override
+	public TopUp applyTopUp(CustomerBean customer, LoanMaster loanMaster, TopUp topUp) throws IOException {
+		LOGGER.info("TopUp is being applied by the customer");
+		EntityTransaction transaction = JpaUtil.getTransaction();
+		topUp.setTopUpBalance(topUp.getTopUpAmount());
+		topUp.setApplicationNumber(loanMaster.getApplicationNumber());
+		topUp.setTopUpAppliedDate(LocalDate.now());
+		topUp.setTopUpStatus(TopUpStatus.PENDING);
+		transaction.begin();
+		TopUp appliedTopUp = topUpDao.applyTopUp(topUp);
+		transaction.commit();
+		return appliedTopUp;
+
 	}
 
 }

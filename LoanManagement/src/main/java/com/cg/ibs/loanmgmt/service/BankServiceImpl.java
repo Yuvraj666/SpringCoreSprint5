@@ -18,11 +18,14 @@ import com.cg.ibs.loanmgmt.bean.CustomerBean;
 import com.cg.ibs.loanmgmt.bean.DocumentBean;
 import com.cg.ibs.loanmgmt.bean.LoanMaster;
 import com.cg.ibs.loanmgmt.bean.LoanTypeBean;
+import com.cg.ibs.loanmgmt.bean.TopUp;
+import com.cg.ibs.loanmgmt.bean.TopUpStatus;
 import com.cg.ibs.loanmgmt.dao.BankAdminsDao;
 import com.cg.ibs.loanmgmt.dao.CustomerDao;
 import com.cg.ibs.loanmgmt.dao.DocumentDao;
 import com.cg.ibs.loanmgmt.dao.LoanMasterDao;
 import com.cg.ibs.loanmgmt.dao.LoanTypeDao;
+import com.cg.ibs.loanmgmt.dao.TopUpDao;
 import com.cg.ibs.loanmgmt.util.JpaUtil;
 
 @Service("BankService")
@@ -37,6 +40,9 @@ public class BankServiceImpl implements BankService {
 	private LoanTypeDao loanTypeDao;
 	@Autowired
 	private DocumentDao docDao;
+	@Autowired
+	private TopUpDao topUpDao;
+	private TopUp topUp = new TopUp();
 
 	private static Logger LOGGER = Logger.getLogger(BankServiceImpl.class);
 	private LoanMaster loanMaster = new LoanMaster();
@@ -67,14 +73,6 @@ public class BankServiceImpl implements BankService {
 				.append(loanMaster.getApplicationNumber());
 		BigInteger bigInteger = new BigInteger(sb.toString());
 		return bigInteger;
-
-	}
-
-	public void updateLoanDenial(LoanMaster loanMasterTemp) {
-		EntityTransaction transaction = JpaUtil.getTransaction();
-		transaction.begin();
-		loanMasterDao.updateLoanDenialDao(loanMasterTemp);
-		transaction.commit();
 
 	}
 
@@ -140,4 +138,56 @@ public class BankServiceImpl implements BankService {
 		return doc;
 	}
 
+	public void updateLoanDenial(LoanMaster loanMasterTemp) {
+		EntityTransaction transaction = JpaUtil.getTransaction();
+		transaction.begin();
+		loanMasterDao.updateLoanDenialDao(loanMasterTemp);
+		transaction.commit();
+
+	}
+
+	@Override
+	public TopUp setTopUp(TopUp topUpTemp) {
+		EntityTransaction transaction = JpaUtil.getTransaction();
+		transaction.begin();
+		topUpTemp.setTopUpStatus(TopUpStatus.APPROVED);
+		topUpTemp.setNumOftopUps(topUp.getNumOftopUps() + 1);
+		generateTopUpId(topUpTemp);
+		topUpDao.updateTopUpApprovalDao(topUpTemp);
+		transaction.commit();
+		return topUp;
+	}
+
+	public BigInteger generateTopUpId(TopUp topUpTemp) {
+		StringBuilder sb = new StringBuilder();
+		sb.append(topUpTemp.getApplicationNumber()).append("-").append(topUpTemp.getNumOftopUps());
+		BigInteger topUpId = new BigInteger(sb.toString());
+		return topUpId;
+	}
+
+	@Override
+	public void updateTopUpDenial(TopUp topUp) {
+		EntityTransaction transaction = JpaUtil.getTransaction();
+		transaction.begin();
+		topUp.setTopUpStatus(TopUpStatus.DENIED);
+		topUpDao.updateTopUpDenialDao(topUp);
+		transaction.commit();
+
+	}
+
+	@Override
+	public LoanMaster getLoanByApplicantNum(BigInteger applicantNum) {
+		EntityTransaction transaction = JpaUtil.getTransaction();
+		transaction.begin();
+		loanMaster = loanMasterDao.getLoanByApplicantNumber(applicantNum);
+		transaction.commit();
+		return null;
+	}
+
+	@Override
+	public List<TopUp> getPendingTopUp() {
+		List<TopUp> listPendingTopUp = null;
+		listPendingTopUp = topUpDao.getPendingTopUp();
+		return listPendingTopUp;
+	}
 }
