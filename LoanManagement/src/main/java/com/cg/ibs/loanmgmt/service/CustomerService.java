@@ -12,6 +12,7 @@ import com.cg.ibs.loanmgmt.bean.CustomerBean;
 import com.cg.ibs.loanmgmt.bean.DocumentBean;
 import com.cg.ibs.loanmgmt.bean.LoanMaster;
 import com.cg.ibs.loanmgmt.bean.LoanTypeBean;
+import com.cg.ibs.loanmgmt.bean.TopUp;
 import com.cg.ibs.loanmgmt.bean.TransactionBean;
 import com.itextpdf.text.DocumentException;
 
@@ -27,6 +28,8 @@ public interface CustomerService {
 	boolean verifyCustomerLogin(String userId, String password);
 
 	LoanMaster applyLoan(CustomerBean customer, LoanMaster loanMaster) throws IOException;
+	
+	TopUp applyTopUp(CustomerBean customer, LoanMaster loanMaster, TopUp topUp) throws IOException;
 
 	CustomerBean getCustomer(String userId);
 
@@ -60,4 +63,8 @@ public interface CustomerService {
 			throws DocumentException, FileNotFoundException;
 
 	public DocumentBean uploadDocument(String docName, BigInteger docApplicationNum, String path) throws IOException;
+	
+	public boolean verifyTopupAmount(LoanMaster loanMasterTemp, BigDecimal topUpAmount);
+
+	public boolean verifyTopUpTenure(LoanMaster loanMasterTemp, Integer topUpTenure);
 }

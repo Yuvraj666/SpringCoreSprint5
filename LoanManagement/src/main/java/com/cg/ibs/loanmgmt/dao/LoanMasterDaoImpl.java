@@ -137,4 +137,9 @@ public class LoanMasterDaoImpl implements LoanMasterDao {
 		listTemp = query.getResultList();
 		return listTemp;
 	}
+	
+	@Override
+	public LoanMaster getLoanByApplicantNumber(BigInteger applicantNum) {
+		return entityManager.find(LoanMaster.class, applicantNum);
+	}
 }

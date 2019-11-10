@@ -7,6 +7,7 @@ import com.cg.ibs.loanmgmt.bean.BankAdmins;
 import com.cg.ibs.loanmgmt.bean.CustomerBean;
 import com.cg.ibs.loanmgmt.bean.LoanMaster;
 import com.cg.ibs.loanmgmt.bean.LoanTypeBean;
+import com.cg.ibs.loanmgmt.bean.TopUp;
 
 public interface BankService {
 	boolean verifyBankLogin(String userId, String password);
@@ -28,4 +29,12 @@ public interface BankService {
 	public List<LoanMaster> getPendingPreClosures();
 
 	public LoanMaster updatePreClosureApproval(LoanMaster loanMasterTemp);
+	
+	public List<TopUp> getPendingTopUp();
+	
+	public void updateTopUpDenial(TopUp topUp);
+	
+	TopUp setTopUp(TopUp topUpTemp);
+	
+	public LoanMaster getLoanByApplicantNum(BigInteger applicantNum);
 }

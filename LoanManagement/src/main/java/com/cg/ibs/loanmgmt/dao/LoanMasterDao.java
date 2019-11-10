@@ -34,4 +34,5 @@ public interface LoanMasterDao {
 
 	// LoanMaster payEmi(CustomerBean customer, LoanMaster loanMaster);
 
+	LoanMaster getLoanByApplicantNumber(BigInteger applicantNum);
 }
