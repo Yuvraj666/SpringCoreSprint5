@@ -171,7 +171,6 @@ public class User implements ExceptionMessages {
 		} else {
 			System.out.println("Good Morning!");
 		}
-		System.out.println(customer.getUci());
 		System.out.println("Welcome " + customer.getFirstName() + " " + customer.getLastName());
 		while (customerChoice != CustomerOptions.LOG_OUT) {
 			System.out.println("--------------------");
@@ -415,7 +414,6 @@ public class User implements ExceptionMessages {
 
 	}
 
-	
 	private void viewHistory(CustomerBean customer) {
 //		SimpleDateFormat ft = new SimpleDateFormat("dd-MM-yyyy");
 		Integer viewHistoryInput;
@@ -554,7 +552,7 @@ public class User implements ExceptionMessages {
 					break;
 				case VERIFY_TOPUP:
 					verifyTopUp();
-					break;	
+					break;
 				case LOG_OUT:
 					userLogin();
 				}
@@ -582,17 +580,15 @@ public class User implements ExceptionMessages {
 		if (approvedLoan.isEmpty()) {
 			System.out.println("No Active Loans");
 		} else {
-			System.out.printf("%20s %20s %20s %20s %25s %25s %20s %20s", "APPLIED DATE", "LOAN AMOUNT", "LOAN TYPE",
-					"LOAN NUMBER", "NUMBER OF EMI's PAID", "TOTAL NUMBER OF EMI's", "LOAN STATUS", "BALANCE");
+			System.out.printf(" %25s %25s %25s %25s ", "LOAN NUMBER", "NUMBER OF EMI's LEFT", "EMI AMOUNT",
+					"LAST DATE FOR NEXT EMI");
 			System.out.println();
 			System.out.println(
 					"--------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
 			for (LoanMaster loanMaster : approvedLoan) {
-				System.out.format("%20tD %20f %20s %20s %25s %25s %20s %20f", loanMaster.getAppliedDate(),
-						loanMaster.getLoanAmount().setScale(2),
-						customerService.getLoanTypeByTypeId(loanMaster.getTypeId()).getLoanType(),
-						loanMaster.getLoanAccountNumber(), loanMaster.getNumOfEmisPaid(),
-						loanMaster.getTotalNumOfEmis(), loanMaster.getStatus(), loanMaster.getBalance());
+				System.out.format(" %25s %25s %25f %25tD ", loanMaster.getLoanAccountNumber(),
+						(loanMaster.getTotalNumOfEmis() - loanMaster.getNumOfEmisPaid()), loanMaster.getEmiAmount(),
+						loanMaster.getNextEmiDate());
 				System.out.println();
 			}
 			System.out.println(
@@ -630,16 +626,18 @@ public class User implements ExceptionMessages {
 					"Loan Type:\t" + customerService.getLoanTypeByTypeId(loanMasterTemp.getTypeId()).getLoanType());
 			System.out.println("Total Number of EMI's to be paid:\t" + loanMasterTemp.getTotalNumOfEmis());
 			System.out.println("Number of EMI's already paid:\t" + loanMasterTemp.getNumOfEmisPaid());
-			System.out.println("Balance Amount to be paid:\t" + loanMasterTemp.getBalance());
+			System.out.println("Balance amount in your savings account:\t" + loanMasterTemp.getSavingsAccount());
+			System.out.println("Outstanding loan balance:\t" + loanMasterTemp.getBalance());
 			System.out.println("EMI to be paid:\t" + loanMasterTemp.getEmiAmount());
 			System.out.println("\n\t\t\t********\n");
 			System.out.println("Do you want to pay EMI:\n1. Yes\n2. No");
 			switch (read.nextInt()) {
 			case 1:
 				customerService.updateEMI(loanMasterTemp);
-				System.out.println("Transaction Successful!");
+				System.out.println("Transaction successful! INR " + loanMasterTemp.getEmiAmount() + "/- has been deducted from your savings account: "
+						+ loanMasterTemp.getSavingsAccount() );
 				createTransaction(loanMasterTemp);
-				System.out.println("Balance has been updated.\nNew balance:\tINR " + loanMasterTemp.getBalance());
+				System.out.println("Balance has been updated.\nNew oustanding loan balance:\tINR " + loanMasterTemp.getBalance());
 				System.out.println("Next EMI Date:\t" + loanMasterTemp.getNextEmiDate());
 				System.out.println("Number of EMIs left:\t"
 						+ (loanMasterTemp.getTotalNumOfEmis() - loanMasterTemp.getNumOfEmisPaid()));
@@ -856,12 +854,12 @@ public class User implements ExceptionMessages {
 
 		}
 	}
-	
+
 	private LoanMaster getLoanByApplicantNum(BigInteger applicantNum) {
 		loanMaster = bankService.getLoanByApplicantNum(applicantNum);
 		return loanMaster;
 	}
-	
+
 	// customer Login
 	private CustomerBean customerLogin() {
 		LOGGER.info("Login portal");
