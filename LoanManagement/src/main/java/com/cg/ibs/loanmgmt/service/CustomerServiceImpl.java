@@ -17,11 +17,16 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.cg.ibs.loanmgmt.bean.Account;
+import com.cg.ibs.loanmgmt.bean.AccountHolding;
 import com.cg.ibs.loanmgmt.bean.CustomerBean;
+import com.cg.ibs.loanmgmt.bean.DocumentBean;
 import com.cg.ibs.loanmgmt.bean.LoanMaster;
 import com.cg.ibs.loanmgmt.bean.LoanStatus;
 import com.cg.ibs.loanmgmt.bean.LoanTypeBean;
 import com.cg.ibs.loanmgmt.bean.TransactionBean;
+import com.cg.ibs.loanmgmt.dao.AccountDao;
+import com.cg.ibs.loanmgmt.dao.AccountHoldingDao;
 import com.cg.ibs.loanmgmt.dao.CustomerDao;
 import com.cg.ibs.loanmgmt.dao.LoanMasterDao;
 import com.cg.ibs.loanmgmt.dao.LoanTypeDao;
@@ -32,6 +37,7 @@ import com.itextpdf.text.Document;
 import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.Paragraph;
 import com.itextpdf.text.pdf.PdfWriter;
+
 @Service("CustomerService")
 public class CustomerServiceImpl implements CustomerService {
 	private static Logger LOGGER = Logger.getLogger(CustomerServiceImpl.class);
@@ -43,8 +49,12 @@ public class CustomerServiceImpl implements CustomerService {
 	private LoanMasterDao loanMasterDao;
 	@Autowired
 	private TransactionDao transactionDao;
-	
+	@Autowired
+	private AccountHoldingDao accountHoldingDao;
+	@Autowired
+	private AccountDao accountDao;
 	private LoanMaster loanMaster = new LoanMaster();
+	private static DocumentBean document;
 
 	@Override
 	public LoanTypeBean getLoanTypeByTypeId(Integer typeId) {
@@ -101,7 +111,7 @@ public class CustomerServiceImpl implements CustomerService {
 	}
 
 	@Override
-	public LoanMaster applyLoan(CustomerBean customer, LoanMaster loanMaster, String path) throws IOException {
+	public LoanMaster applyLoan(CustomerBean customer, LoanMaster loanMaster) throws IOException {
 		LOGGER.info("Loan is being applied by the customer");
 		EntityTransaction transaction = JpaUtil.getTransaction();
 		loanMaster.setUci(customer.getUci());
@@ -114,14 +124,24 @@ public class CustomerServiceImpl implements CustomerService {
 		return appliedLoan;
 	}
 
-	private static byte[] uploadDocument(String path) throws IOException {
-		LOGGER.info("Document is being uploaded for the applied loan");
+	public DocumentBean uploadDocument(String docName, BigInteger docApplicationNum, String path) throws IOException {
+		LOGGER.info("Document's fields are being set.");
+		document = new DocumentBean();
+		document.setApplicationNumber(docApplicationNum);
+		document.setDocumentName(docName);
+		document.setDocument(getDocumentViaPath(path));
+
+		return document;
+
+	}
+
+	private static byte[] getDocumentViaPath(String path) throws IOException {
+		LOGGER.info("Document is being uploaded for the applied loan via the pdf");
 		byte[] content = null;
 		FileInputStream inStream = new FileInputStream(path);
 		content = new byte[(int) inStream.available()];
 		inStream.read(content);
 		inStream.close();
-
 		return content;
 	}
 
@@ -194,7 +214,7 @@ public class CustomerServiceImpl implements CustomerService {
 	@Override
 	public TransactionBean createTransaction(LoanMaster loanMaster) {
 		LOGGER.info("Transaction has been created.");
-		
+
 		TransactionBean transaction = new TransactionBean();
 		EntityTransaction txn = JpaUtil.getTransaction();
 		txn.begin();
@@ -265,4 +285,15 @@ public class CustomerServiceImpl implements CustomerService {
 	public List<LoanMaster> getApprovedLoanListByUci(CustomerBean customer) {
 		return loanMasterDao.getApprovedLoanListByUci(customer);
 	}
+
+	@Override
+	public List<AccountHolding> getSavingAccountListByUci(CustomerBean customer) {
+		return accountHoldingDao.getSavingAccountListByUci(customer);
+	}
+
+	@Override
+	public Account getAccount(BigInteger accountNumber) {
+		return accountDao.getAccount(accountNumber);
+	}
+
 }

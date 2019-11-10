@@ -18,8 +18,10 @@ import org.springframework.stereotype.Component;
 
 import com.cg.ibs.loanmgmt.IBSexception.ExceptionMessages;
 import com.cg.ibs.loanmgmt.IBSexception.IBSException;
+import com.cg.ibs.loanmgmt.bean.AccountHolding;
 import com.cg.ibs.loanmgmt.bean.BankAdmins;
 import com.cg.ibs.loanmgmt.bean.CustomerBean;
+import com.cg.ibs.loanmgmt.bean.DocumentBean;
 import com.cg.ibs.loanmgmt.bean.LoanMaster;
 import com.cg.ibs.loanmgmt.bean.LoanStatus;
 import com.cg.ibs.loanmgmt.bean.TransactionBean;
@@ -36,6 +38,7 @@ public class User implements ExceptionMessages {
 	private BankService bankService;
 	private static Logger LOGGER = Logger.getLogger(User.class);
 	private static Scanner read = new Scanner(System.in);
+	private static DocumentBean document;
 
 	public void userLogin() throws IBSException {
 		UserOptions choice = null;
@@ -166,6 +169,7 @@ public class User implements ExceptionMessages {
 		} else {
 			System.out.println("Good Morning!");
 		}
+		System.out.println(customer.getUci());
 		System.out.println("Welcome " + customer.getFirstName() + " " + customer.getLastName());
 		while (customerChoice != CustomerOptions.LOG_OUT) {
 			System.out.println("--------------------");
@@ -727,21 +731,50 @@ public class User implements ExceptionMessages {
 		if (null == customer) {
 			System.out.println("Thank you for visiting");
 		} else {
-			System.out.println("\n\t\t******Upload Document******\n");
-			System.out.println("Please upload proof document in pdf format");
-			System.out.println("\nEnter the file path: ");
-			String path = read.next();
-			LOGGER.info("Your loan application has been sent for verification");
-			try {
-				System.out.println("Loan with Application Number "
-						+ customerService.applyLoan(customer, loanMaster, path).getApplicationNumber()
-						+ " has been sent for verification!");
-			} catch (IOException exp) {
+			selectSavingsAccount(customer, loanMaster);
+			if (loanMaster.getSavingsAccount() == null) {
+				System.out.println("\t\t********");
+				System.out.println("No Savings Account Exists for customer ID linked to " + customer.getFirstName()
+						+ " " + customer.getLastName() + "\nSavings Account is pre-requisite for Loan Account!\n");
+				System.out.println("\t\t********");
+			} else {
+				boolean docUploadCheck = true;
+				while (docUploadCheck) {
+					System.out.println("\n\t\t******Upload Document******\n");
+					System.out.println("Please upload a valid address proof document in pdf format");
+					System.out.println("Enter the name of the document.");
+					String docName = read.next();
+					BigInteger docApplicationNum = loanMaster.getApplicationNumber();
+					System.out.println("\nEnter the file path: ");
+					String path = read.next();
+					LOGGER.debug("Document Upload Check");
+					try {
+						document = customerService.uploadDocument(docName, docApplicationNum, path);
+						docUploadCheck = false;
+					} catch (IOException exp) {
+						try {
+							throw new IBSException(MESSAGEFORIOEXCEPTION);
+						} catch (IBSException exp1) {
+							System.out.println(exp1.getMessage());
+						}
+					}
+				}
+
+				System.out.println(
+						"Your document has been uploaded against the document ID: " + document.getDocumentId());
+
+				LOGGER.info("Your loan application has been sent for verification");
 				try {
-					throw new IBSException(MESSAGEFORIOEXCEPTION);
-				} catch (IBSException exp1) {
-					LOGGER.error(exp1.getMessage(), exp1);
-					System.out.println(exp1.getMessage());
+					System.out.println("Loan with Application Number "
+							+ customerService.applyLoan(customer, loanMaster).getApplicationNumber()
+							+ " has been sent for verification!");
+				} catch (IOException exp) {
+					try {
+						throw new IBSException(MESSAGEFORIOEXCEPTION);
+					} catch (IBSException exp1) {
+						LOGGER.error(exp1.getMessage(), exp1);
+						System.out.println(exp1.getMessage());
+					}
 				}
 			}
 		}
@@ -814,7 +847,7 @@ public class User implements ExceptionMessages {
 			}
 		}
 		shallContinue = true;
-		LOGGER.debug("Check loan tenure");
+		LOGGER.debug("Checking loan tenure");
 		while (shallContinue) {
 			System.out.println("Enter Loan Tenure (Months): ");
 			System.out.println("** Tenure should be in multiples of 6 months **");
@@ -837,5 +870,56 @@ public class User implements ExceptionMessages {
 		return loanMaster;
 	}
 
-	
+	private LoanMaster selectSavingsAccount(CustomerBean customer, LoanMaster loanMaster) {
+		List<AccountHolding> savingAccountList = new ArrayList<>();
+		savingAccountList = customerService.getSavingAccountListByUci(customer);
+		if (savingAccountList.isEmpty()) {
+			loanMaster.setSavingsAccount(null);
+		} else {
+			System.out.println("Select the Savings Account you would like to link to your Loan Account:");
+			System.out.println("\t\t\t**********\n");
+			System.out.printf("%20s %20s", "ACCOUNT NUMBER", "ACCOUNT TYPE");
+			System.out.println();
+			System.out.println(
+					"------------------------------------------------------------------------------------------------------------------------------------------------------");
+			for (AccountHolding accountHolding : savingAccountList) {
+				System.out.format("%20d %20s ", accountHolding.getAccount().getAccNo(), accountHolding.getType());
+				System.out.println();
+			}
+			System.out.println(
+					"------------------------------------------------------------------------------------------------------------------------------------------------------");
+			System.out.println("\n\t\t\t**********\n");
+			System.out.println();
+			boolean shallContinue = true;
+			LOGGER.debug("Checking loan tenure");
+			BigInteger accountNumber = null;
+			BigInteger accountNumberVerify = null;
+			while (shallContinue) {
+				boolean verify = true;
+				System.out.println("\n\t\t\t**********\n");
+				System.out.println("Enter the Saving Account Number to be linked with you Loan Account: ");
+				accountNumber = read.nextBigInteger();
+				System.out.println("Enter the Saving Account Number again for verification: ");
+				accountNumberVerify = read.nextBigInteger();
+				for (AccountHolding accountHolding : savingAccountList) {
+					if (accountNumber.equals(accountNumberVerify)) {
+						verify = false;
+						if (accountHolding.getAccount().getAccNo().equals(accountNumber)) {
+							shallContinue = false;
+							break;
+						}
+					}
+				}
+				if (verify) {
+					System.out.println("The two account numbers entered  do not match");
+				}
+				if(shallContinue && !verify) {
+					System.out.println(accountNumber + " is not a valid Savings Account Number!\n");
+				}
+			}
+			loanMaster.setSavingsAccount(customerService.getAccount(accountNumber));
+		}
+		return loanMaster;
+	}
+
 }

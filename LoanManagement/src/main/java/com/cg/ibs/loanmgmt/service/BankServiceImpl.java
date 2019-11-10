@@ -15,13 +15,16 @@ import org.springframework.stereotype.Service;
 
 import com.cg.ibs.loanmgmt.bean.BankAdmins;
 import com.cg.ibs.loanmgmt.bean.CustomerBean;
+import com.cg.ibs.loanmgmt.bean.DocumentBean;
 import com.cg.ibs.loanmgmt.bean.LoanMaster;
 import com.cg.ibs.loanmgmt.bean.LoanTypeBean;
 import com.cg.ibs.loanmgmt.dao.BankAdminsDao;
 import com.cg.ibs.loanmgmt.dao.CustomerDao;
+import com.cg.ibs.loanmgmt.dao.DocumentDao;
 import com.cg.ibs.loanmgmt.dao.LoanMasterDao;
 import com.cg.ibs.loanmgmt.dao.LoanTypeDao;
 import com.cg.ibs.loanmgmt.util.JpaUtil;
+
 @Service("BankService")
 public class BankServiceImpl implements BankService {
 	@Autowired
@@ -32,9 +35,12 @@ public class BankServiceImpl implements BankService {
 	private BankAdminsDao bankAdminsDao;
 	@Autowired
 	private LoanTypeDao loanTypeDao;
-	
+	@Autowired
+	private DocumentDao docDao;
+
 	private static Logger LOGGER = Logger.getLogger(BankServiceImpl.class);
 	private LoanMaster loanMaster = new LoanMaster();
+	private static DocumentBean doc;
 
 	@Override
 	public boolean verifyBankLogin(String userId, String password) {
@@ -74,7 +80,7 @@ public class BankServiceImpl implements BankService {
 
 	public LoanMaster updateLoanApproval(LoanMaster loanMasterTemp) {
 		EntityTransaction transaction = JpaUtil.getTransaction();
-		
+
 		transaction.begin();
 		loanMaster = loanMasterDao.updateLoanApprovalDao(loanMasterTemp, generateLoanNumber(loanMasterTemp));
 		transaction.commit();
@@ -109,22 +115,29 @@ public class BankServiceImpl implements BankService {
 
 	@Override
 	public void downloadDocument(LoanMaster loanMaster) {
-	//	byte[] content = loanMaster.getDocument();
+		doc = getDocumentByAppNum(loanMaster.getApplicationNumber());
+
+		byte[] content = doc.getDocument();
 		File dir = new File("./downloads");
 		if (!dir.exists()) {
 			dir.mkdir();
 		}
 		try (FileOutputStream outputStream = new FileOutputStream(
 				dir.getPath() + "/" + loanMaster.getApplicationNumber() + ".pdf")) {
-
-		//	outputStream.write(content);
+			outputStream.write(content);
 			outputStream.flush();
 			outputStream.close();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
+
+		} catch (FileNotFoundException exp) {
+			System.out.println(exp.getMessage());
+		} catch (IOException exp1) {
+			System.out.println(exp1.getMessage());
 		}
+	}
+
+	private DocumentBean getDocumentByAppNum(BigInteger applicationNumber) {
+		doc = docDao.getDocumentByApplicantNum(applicationNumber);
+		return doc;
 	}
 
 }
