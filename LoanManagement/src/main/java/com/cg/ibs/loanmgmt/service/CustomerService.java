@@ -28,6 +28,8 @@ public interface CustomerService {
 
 	LoanMaster applyLoan(CustomerBean customer, LoanMaster loanMaster) throws IOException;
 
+	LoanMaster applyingLoan(LoanMaster loanMaster) throws IOException;
+
 	CustomerBean getCustomer(String userId);
 
 	List<AccountHolding> getSavingAccountListByUci(CustomerBean customer);
@@ -59,5 +61,5 @@ public interface CustomerService {
 	public boolean receiptGenerator(LoanMaster loanMaster, TransactionBean transaction)
 			throws DocumentException, FileNotFoundException;
 
-	public DocumentBean uploadDocument(String docName, BigInteger docApplicationNum, String path) throws IOException;
+	public DocumentBean uploadDocument(LoanMaster loanMaster, String path, Integer docId) throws IOException;
 }

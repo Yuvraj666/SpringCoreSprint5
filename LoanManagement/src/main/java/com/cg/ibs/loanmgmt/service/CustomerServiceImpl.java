@@ -28,6 +28,7 @@ import com.cg.ibs.loanmgmt.bean.TransactionBean;
 import com.cg.ibs.loanmgmt.dao.AccountDao;
 import com.cg.ibs.loanmgmt.dao.AccountHoldingDao;
 import com.cg.ibs.loanmgmt.dao.CustomerDao;
+import com.cg.ibs.loanmgmt.dao.DocumentDao;
 import com.cg.ibs.loanmgmt.dao.LoanMasterDao;
 import com.cg.ibs.loanmgmt.dao.LoanTypeDao;
 import com.cg.ibs.loanmgmt.dao.TransactionDao;
@@ -53,6 +54,8 @@ public class CustomerServiceImpl implements CustomerService {
 	private AccountHoldingDao accountHoldingDao;
 	@Autowired
 	private AccountDao accountDao;
+	@Autowired
+	private DocumentDao documentDao;
 	private LoanMaster loanMaster = new LoanMaster();
 	private static DocumentBean document;
 
@@ -124,13 +127,33 @@ public class CustomerServiceImpl implements CustomerService {
 		return appliedLoan;
 	}
 
-	public DocumentBean uploadDocument(String docName, BigInteger docApplicationNum, String path) throws IOException {
+	public DocumentBean uploadDocument(LoanMaster loanMaster, String path, Integer docId) throws IOException {
 		LOGGER.info("Document's fields are being set.");
 		document = new DocumentBean();
-		document.setApplicationNumber(docApplicationNum);
-		document.setDocumentName(docName);
-		document.setDocument(getDocumentViaPath(path));
-
+		EntityTransaction transaction = JpaUtil.getTransaction();
+		if(docId==0) {
+		document.setApplicationNumber(loanMaster.getApplicationNumber());
+		document.setAadharCard(getDocumentViaPath(path)); 
+		}
+		if(docId==1) {
+			document.setApplicationNumber(loanMaster.getApplicationNumber());
+			document.setProperty_collateral(getDocumentViaPath(path));
+		}
+		if(docId==2) {
+			document.setApplicationNumber(loanMaster.getApplicationNumber());
+			document.setAdmissionLetter(getDocumentViaPath(path));
+		}
+		if(docId==3) {
+			document.setApplicationNumber(loanMaster.getApplicationNumber());
+			document.setPanCard(getDocumentViaPath(path));
+		}
+		if(docId==4) {
+			document.setApplicationNumber(loanMaster.getApplicationNumber());
+			document.setVehicleRc(getDocumentViaPath(path));
+		}
+		transaction.begin();
+		document = documentDao.uploadDocuments(document);
+		transaction.commit();
 		return document;
 
 	}
@@ -294,6 +317,17 @@ public class CustomerServiceImpl implements CustomerService {
 	@Override
 	public Account getAccount(BigInteger accountNumber) {
 		return accountDao.getAccount(accountNumber);
+	}
+
+	@Override
+	public LoanMaster applyingLoan(LoanMaster loanMaster) throws IOException {
+		LOGGER.info("Loan is being applied by the customer");
+		EntityTransaction transaction = JpaUtil.getTransaction();
+		loanMaster.setStatus(LoanStatus.SENT_FOR_VERIFICATION);
+		transaction.begin();
+		LoanMaster appliedLoan = loanMasterDao.applyLoan(loanMaster);
+		transaction.commit();
+		return appliedLoan;
 	}
 
 }

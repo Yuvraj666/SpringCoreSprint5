@@ -46,6 +46,22 @@ public class LoanMaster implements Serializable {
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private LoanStatus status;
+	@Column(name = "next_emi_date")
+	private LocalDate nextEmiDate;
+	@Column(name = "loan_account_num", unique = true)
+	private BigInteger loanAccountNumber;
+	@Column(name = "approved_date")
+	private LocalDate approvedDate;
+	@Column(name = "loan_closed_date")
+	private LocalDate loanClosededDate;
+	@Column(name = "preclosure_applied_date")
+	private LocalDate preclosureAppliedDate;
+	@Column(name = "preclosure_approved_date")
+	private LocalDate preclosureApprovedDate;
+	@Column(name = "top_Up_count")
+	private BigDecimal topUpCount;
+	@OneToOne
+	private Account savingsAccount;
 
 	public LocalDate getApprovedDate() {
 		return approvedDate;
@@ -94,24 +110,6 @@ public class LoanMaster implements Serializable {
 	public void setSavingsAccount(Account savingsAccount) {
 		this.savingsAccount = savingsAccount;
 	}
-
-	@Column(name = "next_emi_date")
-	private LocalDate nextEmiDate;
-	@Column(name = "loan_account_num", unique = true)
-	private BigInteger loanAccountNumber;
-	@Column(name = "approved_date")
-	private LocalDate approvedDate;
-	@Column(name = "loan_closed_date")
-	private LocalDate loanClosededDate;
-	@Column(name = "preclosure_applied_date")
-	private LocalDate preclosureAppliedDate;
-	@Column(name = "preclosure_approved_date")
-	private LocalDate preclosureApprovedDate;
-	@Column(name = "top_Up_count")
-	private BigDecimal topUpCount;
-	@OneToOne
-	private Account savingsAccount;
-
 
 	public LoanMaster() {
 		super();

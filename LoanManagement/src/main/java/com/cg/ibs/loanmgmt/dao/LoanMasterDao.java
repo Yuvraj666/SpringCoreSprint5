@@ -9,12 +9,12 @@ import com.cg.ibs.loanmgmt.bean.LoanMaster;
 
 public interface LoanMasterDao {
 	LoanMaster applyLoan(LoanMaster loanMaster);
-
+	LoanMaster applyingLoan(LoanMaster loanMaster);
 	public LoanMaster updateEmiDao(LoanMaster loanMaster);
 
 	public LoanMaster updateBalanceDao(LoanMaster loanMaster, BigDecimal balance);
 
-	List<LoanMaster> getPendingLoans();
+	List<LoanMaster> getSentForVerificationLoans();
 
 	LoanMaster updateLoanApprovalDao(LoanMaster loanMasterTemp, BigInteger loanNumber);
 

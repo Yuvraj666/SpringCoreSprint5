@@ -36,7 +36,7 @@ public class BankServiceImpl implements BankService {
 	@Autowired
 	private LoanTypeDao loanTypeDao;
 	@Autowired
-	private DocumentDao docDao;
+	private DocumentDao documentDao;
 
 	private static Logger LOGGER = Logger.getLogger(BankServiceImpl.class);
 	private LoanMaster loanMaster = new LoanMaster();
@@ -93,9 +93,9 @@ public class BankServiceImpl implements BankService {
 		return bankAdminsDao.getAdminByUserId(userId);
 	}
 
-	public List<LoanMaster> getPendingLoans() {
+	public List<LoanMaster> getSentForVerificationLoans() {
 		List<LoanMaster> listTemp = null;
-		listTemp = loanMasterDao.getPendingLoans();
+		listTemp = loanMasterDao.getSentForVerificationLoans();
 		return listTemp;
 	}
 
@@ -115,29 +115,69 @@ public class BankServiceImpl implements BankService {
 
 	@Override
 	public void downloadDocument(LoanMaster loanMaster) {
-		doc = getDocumentByAppNum(loanMaster.getApplicationNumber());
-
-		byte[] content = doc.getDocument();
+		List<DocumentBean> documents = documentDao.getDocumentByApplicantNum(loanMaster.getApplicationNumber());
+		byte[] aadhar = null;
+		byte[] loanSpecificDocument=null;
+		if(loanMaster.getTypeId().equals(1)) {
+			for (DocumentBean documentBean : documents) {
+				if(!(documentBean.getAadharCard()==null)) {
+				aadhar = documentBean.getAadharCard();
+				System.out.println(documentBean.getDocumentId());
+				}
+				if(!(documentBean.getProperty_collateral()==null)) {
+					loanSpecificDocument = documentBean.getProperty_collateral();
+					System.out.println(documentBean.getDocumentId());
+				}
+			}
+		}
+		if(loanMaster.getTypeId().equals(2)) {
+			for (DocumentBean documentBean : documents) {
+				if(!(documentBean.getAadharCard()==null)) {
+				aadhar = documentBean.getAadharCard();
+				}
+				if(!(documentBean.getAdmissionLetter()==null)) {
+					loanSpecificDocument = documentBean.getAdmissionLetter();
+				}
+			}
+		}
+		if(loanMaster.getTypeId().equals(3)) {
+			for (DocumentBean documentBean : documents) {
+				if(!(documentBean.getAadharCard()==null)) {
+				aadhar = documentBean.getAadharCard();
+				}
+				if(!(documentBean.getPanCard()==null)) {
+					loanSpecificDocument = documentBean.getPanCard();
+				}
+			}
+		}
+		if(loanMaster.getTypeId().equals(4)) {
+			for (DocumentBean documentBean : documents) {
+				if(!(documentBean.getAadharCard()==null)) {
+				aadhar = documentBean.getAadharCard();
+				}
+				if((!(documentBean.getVehicleRc()==null))) {
+					loanSpecificDocument = documentBean.getVehicleRc();
+				}
+			}
+		}
 		File dir = new File("./downloads");
 		if (!dir.exists()) {
 			dir.mkdir();
 		}
 		try (FileOutputStream outputStream = new FileOutputStream(
-				dir.getPath() + "/" + loanMaster.getApplicationNumber() + ".pdf")) {
-			outputStream.write(content);
+				dir.getPath() + "/" + "Aadhar_"+ loanMaster.getApplicationNumber() + ".pdf");
+				FileOutputStream outputStream2 = new FileOutputStream(dir.getPath() + "/" + "loan_"+ loanMaster.getApplicationNumber() + ".pdf")) {
+			outputStream.write(aadhar);
+			outputStream2.write(loanSpecificDocument);
 			outputStream.flush();
+			outputStream2.flush();
 			outputStream.close();
-
+			outputStream.close();
 		} catch (FileNotFoundException exp) {
 			System.out.println(exp.getMessage());
 		} catch (IOException exp1) {
 			System.out.println(exp1.getMessage());
 		}
-	}
-
-	private DocumentBean getDocumentByAppNum(BigInteger applicationNumber) {
-		doc = docDao.getDocumentByApplicantNum(applicationNumber);
-		return doc;
 	}
 
 }

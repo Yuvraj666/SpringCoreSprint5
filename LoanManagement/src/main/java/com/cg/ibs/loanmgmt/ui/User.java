@@ -412,7 +412,7 @@ public class User implements ExceptionMessages {
 		} while (viewHistoryInput != 6);
 	}
 
-	public BankAdmins adminInit(BankAdmins bankAdmins) throws IBSException {
+	public BankAdmins adminInit(BankAdmins bankAdmin) throws IBSException {
 		AdminOptions adminChoice = null;
 		while (adminChoice != AdminOptions.LOG_OUT) {
 			System.out.println("Menu");
@@ -428,7 +428,7 @@ public class User implements ExceptionMessages {
 				adminChoice = AdminOptions.values()[ordinal - 1];
 				switch (adminChoice) {
 				case VERIFY_LOAN:
-					verifyLoan();
+					verifyLoan(bankAdmin);
 					break;
 				case VERIFY_PRECLOSURE:
 					verifyPreClosure();
@@ -451,7 +451,7 @@ public class User implements ExceptionMessages {
 
 			}
 		}
-		return bankAdmins;
+		return bankAdmin;
 	}
 
 	private void payEmi(CustomerBean customer) {
@@ -555,9 +555,9 @@ public class User implements ExceptionMessages {
 		}
 	}
 
-	private void verifyLoan() {
+	private void verifyLoan(BankAdmins bankAdmin) {
 		List<LoanMaster> pendingLoans = new ArrayList<LoanMaster>();
-		pendingLoans = bankService.getPendingLoans();
+		pendingLoans = bankService.getSentForVerificationLoans();
 		if (pendingLoans.isEmpty()) {
 			System.out.println("No Pending Loans!");
 		} else {
@@ -590,12 +590,13 @@ public class User implements ExceptionMessages {
 						+ bankService.getCustomerDetailsByUci(loanMasterTemp.getUci()).getFirstName() + " "
 						+ bankService.getCustomerDetailsByUci(loanMasterTemp.getUci()).getLastName()
 						+ "\nLoan Amount:\t\t" + loanMasterTemp.getLoanAmount() + "\nLoanTenure:\t\t"
-						+ loanMasterTemp.getLoanTenure() + "\nEMI Amount:\t\tINR " + loanMasterTemp.getEmiAmount());
+						+ loanMasterTemp.getLoanTenure() + "\nEMI Amount:\t\tINR " + loanMasterTemp.getEmiAmount()
+						+ "\nSavings Account Number:\t\t" + loanMasterTemp.getSavingsAccount().getAccNo());
 				bankService.downloadDocument(loanMasterTemp);
 				System.out.println("Document for Application Number " + loanMasterTemp.getApplicationNumber()
 						+ " has been downloaded in the 'Downloads Folder'.");
 				System.out.println("\n\t******");
-				System.out.println("Do you want to approve the loan? \n1. Yes\n2. No");
+				System.out.println("Do you want to approve the loan? \n1. Yes\n2. No\n3. Exit");
 				Integer loanApprovalInput = read.nextInt();
 				switch (loanApprovalInput) {
 				case 1:
@@ -606,7 +607,9 @@ public class User implements ExceptionMessages {
 				case 2:
 					bankService.updateLoanDenial(loanMasterTemp);
 					System.out.println("Loan Declined!");
-
+					break;
+				case 3:
+					verifyLoan(bankAdmin);
 				}
 			} else {
 				try {
@@ -731,48 +734,139 @@ public class User implements ExceptionMessages {
 		if (null == customer) {
 			System.out.println("Thank you for visiting");
 		} else {
-			selectSavingsAccount(customer, loanMaster);
-			if (loanMaster.getSavingsAccount() == null) {
-				System.out.println("\t\t********");
-				System.out.println("No Savings Account Exists for customer ID linked to " + customer.getFirstName()
-						+ " " + customer.getLastName() + "\nSavings Account is pre-requisite for Loan Account!\n");
-				System.out.println("\t\t********");
-			} else {
-				boolean docUploadCheck = true;
-				while (docUploadCheck) {
-					System.out.println("\n\t\t******Upload Document******\n");
-					System.out.println("Please upload a valid address proof document in pdf format");
-					System.out.println("Enter the name of the document.");
-					String docName = read.next();
-					BigInteger docApplicationNum = loanMaster.getApplicationNumber();
-					System.out.println("\nEnter the file path: ");
-					String path = read.next();
-					LOGGER.debug("Document Upload Check");
-					try {
-						document = customerService.uploadDocument(docName, docApplicationNum, path);
-						docUploadCheck = false;
-					} catch (IOException exp) {
-						try {
-							throw new IBSException(MESSAGEFORIOEXCEPTION);
-						} catch (IBSException exp1) {
-							System.out.println(exp1.getMessage());
-						}
-					}
-				}
-
-				System.out.println(
-						"Your document has been uploaded against the document ID: " + document.getDocumentId());
-
-				LOGGER.info("Your loan application has been sent for verification");
-				try {
+			try {
+				selectSavingsAccount(customer, loanMaster);
+				if (loanMaster.getSavingsAccount() == null) {
+					System.out.println("\t\t********");
+					System.out.println("No Savings Account Exists for customer ID linked to " + customer.getFirstName()
+							+ " " + customer.getLastName() + "\nSavings Account is pre-requisite for Loan Account!\n");
+					System.out.println("\t\t********");
+				} else {
+					loanMaster.setApplicationNumber(
+							customerService.applyLoan(customer, loanMaster).getApplicationNumber());
+					documentUpload(loanMaster);
+					LOGGER.info("Your loan application has been sent for verification");
 					System.out.println("Loan with Application Number "
-							+ customerService.applyLoan(customer, loanMaster).getApplicationNumber()
+							+ customerService.applyingLoan(loanMaster).getApplicationNumber()
 							+ " has been sent for verification!");
+				}
+			} catch (IOException exp) {
+				try {
+					throw new IBSException(MESSAGEFORIOEXCEPTION);
+				} catch (IBSException exp1) {
+					LOGGER.error(exp1.getMessage(), exp1);
+					System.out.println(exp1.getMessage());
+				}
+			}
+		}
+	}
+
+	private void documentUpload(LoanMaster loanMaster) {
+		boolean docUploadCheck = true;
+		Integer docId;
+		System.out.println("\n\t\t******Document Upload******\n");
+		while (docUploadCheck) {
+			docId = 0;
+			System.out.println("Please upload your Aadhar Card in pdf format");
+			System.out.println("\nEnter the file path: ");
+			String path = read.next();
+			try {
+				customerService.uploadDocument(loanMaster, path, docId);
+				docUploadCheck = false;
+				if (!docUploadCheck) {
+					System.out.println("Aadhar Card uploaded Successfully");
+				}
+			} catch (IOException exp) {
+				try {
+					throw new IBSException(MESSAGEFORIOEXCEPTION);
+				} catch (IBSException exp1) {
+					System.out.println(exp1.getMessage());
+				}
+			}
+		}
+		if (loanMaster.getTypeId().equals(1)) {
+			docUploadCheck = true;
+			while (docUploadCheck) {
+				docId = 1;
+				System.out.println("Please upload your Property Document for Collateral in pdf format");
+				System.out.println("\nEnter the file path: ");
+				String path = read.next();
+				try {
+					customerService.uploadDocument(loanMaster, path, docId);
+					docUploadCheck = false;
+					if (!docUploadCheck) {
+						System.out.println("Document for Property Collateral uploaded Successfully");
+					}
 				} catch (IOException exp) {
 					try {
 						throw new IBSException(MESSAGEFORIOEXCEPTION);
 					} catch (IBSException exp1) {
-						LOGGER.error(exp1.getMessage(), exp1);
+						System.out.println(exp1.getMessage());
+					}
+				}
+			}
+		}
+		if (loanMaster.getTypeId().equals(2)) {
+			docUploadCheck = true;
+			while (docUploadCheck) {
+				docId = 2;
+				System.out.println("Please upload your Admission Letter Document for Collateral in pdf format");
+				System.out.println("\nEnter the file path: ");
+				String path = read.next();
+				try {
+					customerService.uploadDocument(loanMaster, path, docId);
+					docUploadCheck = false;
+					if (!docUploadCheck) {
+						System.out.println("Document for Property Collateral uploaded Successfully");
+					}
+				} catch (IOException exp) {
+					try {
+						throw new IBSException(MESSAGEFORIOEXCEPTION);
+					} catch (IBSException exp1) {
+						System.out.println(exp1.getMessage());
+					}
+				}
+			}
+		}
+		if (loanMaster.getTypeId().equals(3)) {
+			docUploadCheck = true;
+			while (docUploadCheck) {
+				docId = 3;
+				System.out.println("Please upload your PAN Card Document in pdf format");
+				System.out.println("\nEnter the file path: ");
+				String path = read.next();
+				try {
+					customerService.uploadDocument(loanMaster, path, docId);
+					docUploadCheck = false;
+					if (!docUploadCheck) {
+						System.out.println("Document for PAN Card uploaded Successfully");
+					}
+				} catch (IOException exp) {
+					try {
+						throw new IBSException(MESSAGEFORIOEXCEPTION);
+					} catch (IBSException exp1) {
+						System.out.println(exp1.getMessage());
+					}
+				}
+			}
+		}
+		if (loanMaster.getTypeId().equals(4)) {
+			docUploadCheck = true;
+			while (docUploadCheck) {
+				docId = 4;
+				System.out.println("Please upload your Vehicle Collateral in pdf format");
+				System.out.println("\nEnter the file path: ");
+				String path = read.next();
+				try {
+					customerService.uploadDocument(loanMaster, path, docId);
+					docUploadCheck = false;
+					if (!docUploadCheck) {
+						System.out.println("Document for Vehicle Collateral uploaded Successfully");
+					}
+				} catch (IOException exp) {
+					try {
+						throw new IBSException(MESSAGEFORIOEXCEPTION);
+					} catch (IBSException exp1) {
 						System.out.println(exp1.getMessage());
 					}
 				}
@@ -913,7 +1007,7 @@ public class User implements ExceptionMessages {
 				if (verify) {
 					System.out.println("The two account numbers entered  do not match");
 				}
-				if(shallContinue && !verify) {
+				if (shallContinue && !verify) {
 					System.out.println(accountNumber + " is not a valid Savings Account Number!\n");
 				}
 			}
