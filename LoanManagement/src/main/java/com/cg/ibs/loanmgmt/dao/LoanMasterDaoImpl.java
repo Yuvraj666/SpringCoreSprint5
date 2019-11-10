@@ -51,9 +51,9 @@ public class LoanMasterDaoImpl implements LoanMasterDao {
 		entityManager.merge(loanMasterTemp);
 	}
 
-	public List<LoanMaster> getPendingLoans() {
+	public List<LoanMaster> getSentForVerificationLoans() {
 		LOGGER.info("Pending loans are being fetched from database.");
-		TypedQuery<LoanMaster> query = entityManager.createQuery("Select l from LoanMaster l where l.status ='PENDING'",
+		TypedQuery<LoanMaster> query = entityManager.createQuery("Select l from LoanMaster l where l.status ='SENT_FOR_VERIFICATION'",
 				LoanMaster.class);
 		List<LoanMaster> pendingLoans = query.getResultList();
 		return sortLoanMasterListByAppNum(pendingLoans);
@@ -136,5 +136,11 @@ public class LoanMasterDaoImpl implements LoanMasterDao {
 		List<LoanMaster> listTemp = new ArrayList<LoanMaster>();
 		listTemp = query.getResultList();
 		return listTemp;
+	}
+
+	@Override
+	public LoanMaster applyingLoan(LoanMaster loanMaster) {
+		LOGGER.info("Loan Uploaded with Documents");
+		return entityManager.merge(loanMaster);
 	}
 }

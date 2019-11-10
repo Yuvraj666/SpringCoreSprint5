@@ -17,7 +17,7 @@ public interface BankService {
 
 	public LoanMaster updateLoanApproval(LoanMaster loanMasterTemp);
 
-	public List<LoanMaster> getPendingLoans();
+	public List<LoanMaster> getSentForVerificationLoans();
 
 	public CustomerBean getCustomerDetailsByUci(BigInteger uci);
 
